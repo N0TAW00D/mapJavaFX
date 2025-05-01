@@ -32,6 +32,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javaproject.models.ControlPoint;
+import javaproject.models.Edge;
+import javaproject.models.MathUtils;
+import javaproject.models.Node;
 
 public class App extends Application {
 
@@ -301,44 +305,13 @@ public class App extends Application {
             String edgeType = edge.curved ? "Curved" : "Straight";
             double distance;
             if (edge.curved) {
-                distance = calculateCurveLength(edge.node1, edge.controlPoint, edge.node2);
+                distance = MathUtils.calculateCurveLength(edge.node1, edge.controlPoint, edge.node2,scaleRatio);
             } else {
-                distance = calculateDistance(edge.node1, edge.node2);
+                distance = MathUtils.calculateDistance(edge.node1, edge.node2,scaleRatio);
             }
             edgeListView.getItems().add(String.format("%s -> %s (%s, %.1f %s)",
                     edge.node1.label, edge.node2.label, edgeType, distance, unitName));
         }
-    }
-
-    private double calculateDistance(Node node1, Node node2) {
-        double dx = node2.x - node1.x;
-        double dy = node2.y - node1.y;
-        return Math.sqrt(dx * dx + dy * dy) * scaleRatio;
-    }
-
-    private double calculateCurveLength(Node p0, ControlPoint p1, Node p2) {
-        // Approximate the curve length by dividing it into small segments
-        int steps = 20; // More steps = more accurate but slower
-        double length = 0;
-        double prevX = p0.x;
-        double prevY = p0.y;
-
-        for (int i = 1; i <= steps; i++) {
-            double t = i / (double) steps;
-            // Calculate point on curve at t
-            double x = Math.pow(1 - t, 2) * p0.x + 2 * (1 - t) * t * p1.x + Math.pow(t, 2) * p2.x;
-            double y = Math.pow(1 - t, 2) * p0.y + 2 * (1 - t) * t * p1.y + Math.pow(t, 2) * p2.y;
-
-            // Add distance from previous point
-            double dx = x - prevX;
-            double dy = y - prevY;
-            length += Math.sqrt(dx * dx + dy * dy);
-
-            prevX = x;
-            prevY = y;
-        }
-
-        return length * scaleRatio; // Convert to real-world units
     }
 
     private void deleteSelected() {
@@ -516,10 +489,10 @@ public class App extends Application {
         double distance;
         if (curvedEdgeMode && controlPoint != null) {
             // For curves with control points (either being drawn or existing ones)
-            distance = calculateCurveLength(node1, controlPoint, node2);
+            distance = MathUtils.calculateCurveLength(node1, controlPoint, node2, scaleRatio);
         } else {
             // For straight edges
-            distance = calculateDistance(node1, node2);
+            distance = MathUtils.calculateDistance(node1, node2,scaleRatio);
         }
 
         String distanceText = String.format("%.2f %s", distance, unitName);
@@ -712,51 +685,5 @@ public class App extends Application {
 
     public static void main(String[] args) {
         launch(args);
-    }
-
-    class Node {
-
-        double x, y;
-        double radius;
-        String label;
-
-        Node(double x, double y, double radius, String label) {
-            this.x = x;
-            this.y = y;
-            this.radius = radius;
-            this.label = label;
-        }
-    }
-
-    class Edge {
-
-        Node node1, node2;
-        boolean curved;
-        ControlPoint controlPoint;
-
-        Edge(Node node1, Node node2, boolean curved, ControlPoint controlPoint) {
-            this.node1 = node1;
-            this.node2 = node2;
-            this.curved = curved;
-            this.controlPoint = controlPoint;
-        }
-
-        double getLength() {
-            if (curved) {
-                return calculateCurveLength(node1, controlPoint, node2);
-            } else {
-                return calculateDistance(node1, node2);
-            }
-        }
-    }
-
-    class ControlPoint {
-
-        double x, y;
-
-        ControlPoint(double x, double y) {
-            this.x = x;
-            this.y = y;
-        }
     }
 }
