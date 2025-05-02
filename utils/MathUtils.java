@@ -1,4 +1,7 @@
-package javaproject.models;
+package javaproject.utils;
+
+import javaproject.models.ControlPoint;
+import javaproject.models.Node;
 
 public class MathUtils {
     

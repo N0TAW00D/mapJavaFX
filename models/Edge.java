@@ -1,5 +1,7 @@
 package javaproject.models;
 
+import javaproject.utils.MathUtils;
+
 public class Edge {
     public Node node1, node2;
     public boolean curved;

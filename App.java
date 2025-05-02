@@ -24,6 +24,7 @@ import javafx.scene.control.Separator;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToolBar;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
@@ -34,8 +35,9 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javaproject.models.ControlPoint;
 import javaproject.models.Edge;
-import javaproject.models.MathUtils;
 import javaproject.models.Node;
+import javaproject.utils.ImageImporter;
+import javaproject.utils.MathUtils;
 
 public class App extends Application {
 
@@ -67,6 +69,8 @@ public class App extends Application {
         canvas = new Canvas(1000, 700);
         gc = canvas.getGraphicsContext2D();
 
+        Scene scene = new Scene(root);
+
         // Wrap Canvas in a Group then in a ScrollPane
         javafx.scene.Group canvasGroup = new javafx.scene.Group(canvas);
         ScrollPane scrollPane = new ScrollPane(canvasGroup);
@@ -75,7 +79,7 @@ public class App extends Application {
         // Create toolbar
         ToolBar toolbar = new ToolBar();
         Button addNodeBtn = new Button("Add Node");
-        CheckBox addNodeCheck = new CheckBox("Add Node");
+        CheckBox addNodeCheck = new CheckBox("");
         addNodeCheck.setSelected(true);
 
         Button straightEdgeBtn = new Button("Straight Edge");
@@ -160,7 +164,22 @@ public class App extends Application {
 
         saveBtn.setOnAction(e -> saveMap(primaryStage));
         loadBtn.setOnAction(e -> loadMap(primaryStage));
-        importImageBtn.setOnAction(e -> importImage(primaryStage));
+
+        // ImageImporter.importImage(primaryStage, canvas, image -> {
+        //     this.backgroundImage = image;
+        // }, this::redrawCanvas);
+        
+        // importImageBtn.setOnAction(e -> importImage(primaryStage));
+
+        importImageBtn.setOnAction(e -> {
+            ImageImporter.importImage(
+                primaryStage,
+                canvas,
+                image -> this.backgroundImage = image,
+                this::redrawCanvas
+            );
+        });
+        
         setScaleBtn.setOnAction(e -> setScale(primaryStage));
 
         addNodeCheck.setOnAction(e -> {
@@ -184,6 +203,10 @@ public class App extends Application {
         canvas.setOnMouseClicked(this::handlePrimaryClick);
         canvas.setOnMousePressed(this::handleMousePressed);
         canvas.setOnMouseDragged(this::handleMouseDragged);
+
+        // scene.setOnKeyPressed(this::handleKeyPress);
+        scene.setOnKeyPressed(event -> handleKeyPress(event, primaryStage));
+
         canvas.setOnMouseReleased(e -> {
             draggedNode = null;
             redrawCanvas();
@@ -265,7 +288,7 @@ public class App extends Application {
         });
 
         redrawCanvas();
-        Scene scene = new Scene(root);
+        // Scene scene = new Scene(root);
         primaryStage.setTitle("MiniMap Builder");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -292,6 +315,111 @@ public class App extends Application {
             updateLists();
             redrawCanvas();
         });
+    }
+
+    private void handleKeyPress(KeyEvent event, Stage primaryStage) {
+        // System.out.println(event.getCode());
+        switch (event.getCode()) {
+            case A:
+                // Add Node mode
+                isAddNode = true;
+                creatingEdge = false;
+                curvedEdgeMode = false;
+                selectedNode = null;
+                controlPoint = null;
+                break;
+                
+            case S:
+                // Straight Edge mode
+                creatingEdge = true;
+                curvedEdgeMode = false;
+                selectedNode = null;
+                controlPoint = null;
+                break;
+                
+            case C:
+                // Curved Edge mode
+                creatingEdge = true;
+                curvedEdgeMode = true;
+                selectedNode = null;
+                controlPoint = null;
+                break;
+                
+            case BACK_SPACE:
+            case DELETE:
+                // Delete selected
+                deleteSelected();
+                updateLists();
+                redrawCanvas();
+                break;
+                
+            case R:
+                // Rename node
+                renameSelectedNode(primaryStage);
+            break;
+                
+            case PLUS:
+            case EQUALS:
+                // Zoom in
+                zoom(1.1);
+                break;
+                
+            case MINUS:
+            case SUBTRACT:
+                // Zoom out
+                zoom(1 / 1.1);
+                break;
+                
+            case D:
+                // Toggle distance display
+                showDistances = !showDistances;
+                redrawCanvas();
+                break;
+                
+            case N:
+                // Select next node in list
+                if (!nodes.isEmpty()) {
+                    int currentIndex = nodeListView.getSelectionModel().getSelectedIndex();
+                    int newIndex = (currentIndex + 1) % nodes.size();
+                    nodeListView.getSelectionModel().select(newIndex);
+                }
+                break;
+                
+            case P:
+                // Select previous node in list
+                if (!nodes.isEmpty()) {
+                    int currentIndex = nodeListView.getSelectionModel().getSelectedIndex();
+                    int newIndex = (currentIndex - 1 + nodes.size()) % nodes.size();
+                    nodeListView.getSelectionModel().select(newIndex);
+                }
+                break;
+                
+            case E:
+                // Select next edge in list
+                if (!edges.isEmpty()) {
+                    int currentIndex = edgeListView.getSelectionModel().getSelectedIndex();
+                    int newIndex = (currentIndex + 1) % edges.size();
+                    edgeListView.getSelectionModel().select(newIndex);
+                }
+                break;
+                
+            case W:
+                // Select previous edge in list
+                if (!edges.isEmpty()) {
+                    int currentIndex = edgeListView.getSelectionModel().getSelectedIndex();
+                    int newIndex = (currentIndex - 1 + edges.size()) % edges.size();
+                    edgeListView.getSelectionModel().select(newIndex);
+                }
+                break;
+                
+            case ESCAPE:
+                // Cancel current operation
+                selectedNode = null;
+                controlPoint = null;
+                creatingEdge = false;
+                redrawCanvas();
+                break;
+        }
     }
 
     private void updateLists() {
@@ -634,26 +762,7 @@ public class App extends Application {
         canvas.setScaleX(canvas.getScaleX() * zoomFactor);
         canvas.setScaleY(canvas.getScaleY() * zoomFactor);
     }
-
-    private void importImage(Stage primaryStage) {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Import Map Image");
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg")
-        );
-        File file = fileChooser.showOpenDialog(primaryStage);
-
-        if (file != null) {
-            try {
-                backgroundImage = new Image(file.toURI().toString());
-                canvas.setWidth(backgroundImage.getWidth());
-                canvas.setHeight(backgroundImage.getHeight());
-                redrawCanvas();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
+    
 
     private void setScale(Stage primaryStage) {
         TextInputDialog dialog = new TextInputDialog("1.0");
