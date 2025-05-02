@@ -12,6 +12,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -28,6 +30,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -63,6 +66,7 @@ public class App extends Application {
     private ListView<String> nodeListView = new ListView<>();
     private ListView<String> edgeListView = new ListView<>();
 
+    
     @Override
     public void start(Stage primaryStage) {
         BorderPane root = new BorderPane();
@@ -110,17 +114,27 @@ public class App extends Application {
         statusBox.setStyle("-fx-background-color: #eee; -fx-padding: 5px;");
 
         // Right panel for lists
-        VBox rightPanel = new VBox();
-        rightPanel.setPrefWidth(200);
-        rightPanel.getChildren().addAll(
+        VBox leftPanel = new VBox();
+        leftPanel.setPrefWidth(200);
+        leftPanel.getChildren().addAll(
                 new Label("Nodes:"),
                 nodeListView,
                 new Label("Edges:"),
                 edgeListView
         );
 
+        VBox rightPanel = new VBox();
+        rightPanel.setPrefWidth(200);
+        rightPanel.getChildren().addAll(
+                new Label("Solve the Direction"),
+                new Label(),
+                new Label("Start"),
+                new Label("Destination")
+        );
+
         root.setTop(toolbar);
         root.setCenter(scrollPane);
+        root.setLeft(leftPanel);
         root.setRight(rightPanel);
         root.setBottom(statusBox);
 
@@ -168,18 +182,16 @@ public class App extends Application {
         // ImageImporter.importImage(primaryStage, canvas, image -> {
         //     this.backgroundImage = image;
         // }, this::redrawCanvas);
-        
         // importImageBtn.setOnAction(e -> importImage(primaryStage));
-
         importImageBtn.setOnAction(e -> {
             ImageImporter.importImage(
-                primaryStage,
-                canvas,
-                image -> this.backgroundImage = image,
-                this::redrawCanvas
+                    primaryStage,
+                    canvas,
+                    image -> this.backgroundImage = image,
+                    this::redrawCanvas
             );
         });
-        
+
         setScaleBtn.setOnAction(e -> setScale(primaryStage));
 
         addNodeCheck.setOnAction(e -> {
@@ -239,10 +251,10 @@ public class App extends Application {
                             // Create a temporary control point at the midpoint
                             double midX = (selectedNode.x + e.getX()) / 2;
                             double midY = (selectedNode.y + e.getY()) / 2;
-                            drawCurvedEdge(selectedNode, new Node(e.getX(), e.getY(), 0, ""),
+                            drawCurvedEdge(selectedNode, new Node(e.getX(), e.getY(), 0, "",false),
                                     new ControlPoint(midX, midY), Color.GRAY);
                         } else {
-                            drawCurvedEdge(selectedNode, new Node(e.getX(), e.getY(), 0, ""),
+                            drawCurvedEdge(selectedNode, new Node(e.getX(), e.getY(), 0, "",false),
                                     controlPoint, Color.GRAY);
                         }
                     } else {
@@ -294,6 +306,31 @@ public class App extends Application {
         primaryStage.show();
     }
 
+    private void logChecker() {
+        System.out.println();
+        System.out.println("Log Checker -----------");
+        System.out.println();
+
+        System.out.println("All Nodes:");
+        for (Node node : nodes) {
+            System.out.println(node.label); // uses toString()
+        }
+
+        System.out.println("All Edges:");
+        for (Edge edge : edges) {
+            System.out.println(edge); // uses toString()
+        }
+
+        System.out.println("nodeListView ----------");
+        System.out.println(nodeListView.getItems());
+        System.out.println();
+
+        System.out.println("edgeListView ----------");
+        System.out.println(edgeListView.getItems());
+        System.out.println();
+
+    }
+
     private void renameSelectedNode(Stage primaryStage) {
         if (selectedNode == null) {
             // Check if a node is selected in the list view
@@ -308,10 +345,31 @@ public class App extends Application {
         TextInputDialog dialog = new TextInputDialog(selectedNode.label);
         dialog.setTitle("Rename Node");
         dialog.setHeaderText("Enter new name for the node");
-        dialog.setContentText("Node name:");
+
+        // Create the checkbox
+        CheckBox isSpecialCheck = new CheckBox("Is it Special Node?");
+        isSpecialCheck.setSelected(selectedNode.isSpecial);
+
+        // Create a container for the dialog content
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        // Add components to the grid
+        grid.add(new Label("Node name:"), 0, 0);
+        grid.add(dialog.getEditor(), 1, 0);
+        grid.add(isSpecialCheck, 0, 1, 2, 1);
+
+        // Set the grid as the dialog's content
+        dialog.getDialogPane().setContent(grid);
+
+        // Focus on the text field by default
+        Platform.runLater(() -> dialog.getEditor().requestFocus());
 
         dialog.showAndWait().ifPresent(newName -> {
             selectedNode.label = newName;
+            selectedNode.isSpecial = isSpecialCheck.isSelected(); // Update the special status
             updateLists();
             redrawCanvas();
         });
@@ -328,7 +386,7 @@ public class App extends Application {
                 selectedNode = null;
                 controlPoint = null;
                 break;
-                
+
             case S:
                 // Straight Edge mode
                 creatingEdge = true;
@@ -336,7 +394,7 @@ public class App extends Application {
                 selectedNode = null;
                 controlPoint = null;
                 break;
-                
+
             case C:
                 // Curved Edge mode
                 creatingEdge = true;
@@ -344,7 +402,7 @@ public class App extends Application {
                 selectedNode = null;
                 controlPoint = null;
                 break;
-                
+
             case BACK_SPACE:
             case DELETE:
                 // Delete selected
@@ -352,30 +410,30 @@ public class App extends Application {
                 updateLists();
                 redrawCanvas();
                 break;
-                
+
             case R:
                 // Rename node
                 renameSelectedNode(primaryStage);
-            break;
-                
+                break;
+
             case PLUS:
             case EQUALS:
                 // Zoom in
                 zoom(1.1);
                 break;
-                
+
             case MINUS:
             case SUBTRACT:
                 // Zoom out
                 zoom(1 / 1.1);
                 break;
-                
+
             case D:
                 // Toggle distance display
                 showDistances = !showDistances;
                 redrawCanvas();
                 break;
-                
+
             case N:
                 // Select next node in list
                 if (!nodes.isEmpty()) {
@@ -384,7 +442,7 @@ public class App extends Application {
                     nodeListView.getSelectionModel().select(newIndex);
                 }
                 break;
-                
+
             case P:
                 // Select previous node in list
                 if (!nodes.isEmpty()) {
@@ -393,7 +451,7 @@ public class App extends Application {
                     nodeListView.getSelectionModel().select(newIndex);
                 }
                 break;
-                
+
             case E:
                 // Select next edge in list
                 if (!edges.isEmpty()) {
@@ -402,7 +460,7 @@ public class App extends Application {
                     edgeListView.getSelectionModel().select(newIndex);
                 }
                 break;
-                
+
             case W:
                 // Select previous edge in list
                 if (!edges.isEmpty()) {
@@ -411,7 +469,7 @@ public class App extends Application {
                     edgeListView.getSelectionModel().select(newIndex);
                 }
                 break;
-                
+
             case ESCAPE:
                 // Cancel current operation
                 selectedNode = null;
@@ -419,13 +477,17 @@ public class App extends Application {
                 creatingEdge = false;
                 redrawCanvas();
                 break;
+
+            case SLASH:
+                logChecker();
+                break;
         }
     }
 
     private void updateLists() {
         nodeListView.getItems().clear();
         for (Node node : nodes) {
-            nodeListView.getItems().add(String.format("%s (%.1f, %.1f)", node.label, node.x, node.y));
+            nodeListView.getItems().add(String.format("%s (%.1f, %.1f, %b)", node.label, node.x, node.y, node.isSpecial));
         }
 
         edgeListView.getItems().clear();
@@ -433,9 +495,9 @@ public class App extends Application {
             String edgeType = edge.curved ? "Curved" : "Straight";
             double distance;
             if (edge.curved) {
-                distance = MathUtils.calculateCurveLength(edge.node1, edge.controlPoint, edge.node2,scaleRatio);
+                distance = MathUtils.calculateCurveLength(edge.node1, edge.controlPoint, edge.node2, scaleRatio);
             } else {
-                distance = MathUtils.calculateDistance(edge.node1, edge.node2,scaleRatio);
+                distance = MathUtils.calculateDistance(edge.node1, edge.node2, scaleRatio);
             }
             edgeListView.getItems().add(String.format("%s -> %s (%s, %.1f %s)",
                     edge.node1.label, edge.node2.label, edgeType, distance, unitName));
@@ -463,7 +525,7 @@ public class App extends Application {
 
     private void handlePrimaryClick(MouseEvent e) {
         if (!creatingEdge && isAddNode) {
-            Node newNode = new Node(e.getX(), e.getY(), 5, String.valueOf(nodes.size() + 1));
+            Node newNode = new Node(e.getX(), e.getY(), 5, String.valueOf(nodes.size() + 1),false);
             nodes.add(newNode);
             updateLists();
             redrawCanvas();
@@ -620,7 +682,7 @@ public class App extends Application {
             distance = MathUtils.calculateCurveLength(node1, controlPoint, node2, scaleRatio);
         } else {
             // For straight edges
-            distance = MathUtils.calculateDistance(node1, node2,scaleRatio);
+            distance = MathUtils.calculateDistance(node1, node2, scaleRatio);
         }
 
         String distanceText = String.format("%.2f %s", distance, unitName);
@@ -664,6 +726,7 @@ public class App extends Application {
                     nodeObj.put("y", node.y);
                     nodeObj.put("radius", node.radius);
                     nodeObj.put("label", node.label);
+                    nodeObj.put("isSpecial", node.isSpecial);
                     nodesArray.put(nodeObj);
                 }
                 mapData.put("nodes", nodesArray);
@@ -720,7 +783,8 @@ public class App extends Application {
                             nodeObj.getDouble("x"),
                             nodeObj.getDouble("y"),
                             nodeObj.getDouble("radius"),
-                            nodeObj.getString("label")
+                            nodeObj.getString("label"),
+                            nodeObj.getBoolean("isSpecial")
                     );
                     nodes.add(node);
                 }
@@ -762,7 +826,6 @@ public class App extends Application {
         canvas.setScaleX(canvas.getScaleX() * zoomFactor);
         canvas.setScaleY(canvas.getScaleY() * zoomFactor);
     }
-    
 
     private void setScale(Stage primaryStage) {
         TextInputDialog dialog = new TextInputDialog("1.0");
