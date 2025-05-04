@@ -164,7 +164,7 @@ public class App extends Application {
         // Solution display
         solutionText.setEditable(false);
         solutionText.setWrapText(true);
-        solutionText.setPrefHeight(150);
+        solutionText.setPrefHeight(200);
 
         // Show path checkbox
         showPathCheck.setSelected(true);
@@ -431,11 +431,23 @@ public class App extends Application {
         sb.append("Path from ").append(start.label).append(" to ").append(dest.label).append(":\n");
 
         double totalDistance = 0;
+        String activist = new String();
+
+        activist = start.label;
+
         for (Edge edge : solutionPath) {
             double distance = edge.getLength(scaleRatio);
             totalDistance += distance;
-            sb.append("- ").append(edge.node2.label).append(" → ").append(edge.node1.label)
-                    .append(" (").append(String.format("%.2f", distance)).append(" ").append(unitName).append(")\n");
+
+            if(activist == edge.node1.label){
+                sb.append("- ").append(edge.node1.label).append(" → ").append(edge.node2.label)
+                        .append(" (").append(String.format("%.2f", distance)).append(" ").append(unitName).append(")\n");
+                activist = edge.node2.label;
+            } else {
+                sb.append("- ").append(edge.node2.label).append(" → ").append(edge.node1.label)
+                        .append(" (").append(String.format("%.2f", distance)).append(" ").append(unitName).append(")\n");
+                activist = edge.node1.label;
+            }
         }
 
         sb.append("\nTotal distance: ").append(String.format("%.2f", totalDistance)).append(" ").append(unitName);
