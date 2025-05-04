@@ -44,6 +44,7 @@ import javafx.stage.Stage;
 import javaproject.models.ControlPoint;
 import javaproject.models.Edge;
 import javaproject.models.Node;
+import javaproject.utils.AStarPathfinder;
 import javaproject.utils.ImageImporter;
 import javaproject.utils.MathUtils;
 
@@ -67,6 +68,8 @@ public class App extends Application {
     private String unitName = "m"; // default unit
     private boolean showDistances = true;
     private boolean isAddNode = true;
+
+    private int logCount = 0;
 
     private double radius = 5;
 
@@ -98,7 +101,7 @@ public class App extends Application {
         ToolBar toolbar = new ToolBar();
         Button addNodeBtn = new Button("Add Node");
         CheckBox addNodeCheck = new CheckBox("");
-        addNodeCheck.setSelected(true);
+        addNodeCheck.setSelected(false);
 
         Button straightEdgeBtn = new Button("Straight Edge");
         Button curvedEdgeBtn = new Button("Curved Edge");
@@ -293,7 +296,8 @@ public class App extends Application {
                     } else {
                         gc.strokeLine(selectedNode.x, selectedNode.y, hoveredNode.x, hoveredNode.y);
                     }
-                    drawDistanceLabel(selectedNode, hoveredNode, Color.GRAY);
+                    // drawDistanceLabel(selectedNode, hoveredNode, Color.GRAY);
+                    drawDistanceLabel(selectedNode, hoveredNode, Color.GRAY, false, null);
                 } else {
                     if (curvedEdgeMode) {
                         if (controlPoint == null) {
@@ -357,47 +361,85 @@ public class App extends Application {
     }
 
     private void solvePath() {
-        int startIndex = startNodeCombo.getSelectionModel().getSelectedIndex();
-        int destIndex = destinationNodeCombo.getSelectionModel().getSelectedIndex();
+        // Get the selected node labels from combo boxes
+        String startLabel = startNodeCombo.getSelectionModel().getSelectedItem();
+        String destLabel = destinationNodeCombo.getSelectionModel().getSelectedItem();
 
-        if (startIndex < 0 || destIndex < 0 || startIndex == destIndex) {
+        if (startLabel == null || destLabel == null || startLabel.equals(destLabel)) {
             solutionText.setText("Please select valid start and destination nodes");
             return;
         }
 
-        Node start = nodes.get(startIndex);
-        Node dest = nodes.get(destIndex);
+        // Find the actual Node objects by label
+        Node start = null;
+        Node dest = null;
+        for (Node node : nodes) {
+            if (node.label.equals(startLabel)) {
+                start = node;
+            }
+            if (node.label.equals(destLabel)) {
+                dest = node;
+            }
+            if (start != null && dest != null) {
+                break; // Found both
+
+                    }}
+
+        if (start == null || dest == null) {
+            solutionText.setText("Selected nodes not found in graph");
+            return;
+        }
 
         // Clear previous solution
         solutionPath.clear();
 
-        // Here you would implement your pathfinding algorithm
-        // For now, we'll just find a direct path if it exists
-        for (Edge edge : edges) {
-            if ((edge.node1 == start && edge.node2 == dest)
-                    || (edge.node1 == dest && edge.node2 == start)) {
-                solutionPath.add(edge);
-                break;
+        // Use A* algorithm
+        AStarPathfinder.PathResult result = AStarPathfinder.findPath(nodes, edges, start, dest);
+
+        System.err.println("nodes: " + nodes.toString());
+        System.err.println();
+        System.err.println("edges: " + edges.toString());
+        System.err.println();
+        System.err.println("start: " + start.label);
+        System.err.println();
+        System.err.println("dest: " + dest.label);
+        System.err.println();
+
+        if (result.path.isEmpty()) {
+            solutionText.setText("No path found between " + start.label + " and " + dest.label);
+            return;
+        }
+
+        // Convert path to edges for visualization
+        solutionPath.clear();
+        for (int i = 0; i < result.path.size() - 1; i++) {
+            Node node1 = result.path.get(i);
+            Node node2 = result.path.get(i + 1);
+
+            // Find the edge between these nodes
+            for (Edge edge : edges) {
+                if ((edge.node1.equals(node1) && edge.node2.equals(node2))
+                        || (edge.node1.equals(node2) && edge.node2.equals(node1))) {
+                    solutionPath.add(edge);
+                    break;
+                }
             }
         }
 
-        if (solutionPath.isEmpty()) {
-            solutionText.setText("No direct path found between " + start.label + " and " + dest.label);
-        } else {
-            double totalDistance = 0;
-            StringBuilder sb = new StringBuilder();
-            sb.append("Path from ").append(start.label).append(" to ").append(dest.label).append(":\n");
+        // Build solution text
+        StringBuilder sb = new StringBuilder();
+        sb.append("Path from ").append(start.label).append(" to ").append(dest.label).append(":\n");
 
-            for (Edge edge : solutionPath) {
-                double distance = edge.getLength(scaleRatio);
-                totalDistance += distance;
-                sb.append("- ").append(edge.node1.label).append(" -> ").append(edge.node2.label)
-                        .append(" (").append(String.format("%.2f", distance)).append(" ").append(unitName).append(")\n");
-            }
-
-            sb.append("\nTotal distance: ").append(String.format("%.2f", totalDistance)).append(" ").append(unitName);
-            solutionText.setText(sb.toString());
+        double totalDistance = 0;
+        for (Edge edge : solutionPath) {
+            double distance = edge.getLength(scaleRatio);
+            totalDistance += distance;
+            sb.append("- ").append(edge.node2.label).append(" → ").append(edge.node1.label)
+                    .append(" (").append(String.format("%.2f", distance)).append(" ").append(unitName).append(")\n");
         }
+
+        sb.append("\nTotal distance: ").append(String.format("%.2f", totalDistance)).append(" ").append(unitName);
+        solutionText.setText(sb.toString());
 
         redrawCanvas();
     }
@@ -607,21 +649,23 @@ public class App extends Application {
         for (Edge edge : edges) {
             // Highlight solution path edges if showing
             boolean isSolutionEdge = showPathCheck.isSelected() && solutionPath.contains(edge);
-
+            Color edgeColor = isSolutionEdge ? Color.GREEN : Color.BLACK;
+            Color labelColor = isSolutionEdge ? Color.DARKGREEN : Color.BLUE;
+    
             if (edge.curved) {
-                drawCurvedEdge(edge.node1, edge.node2, edge.controlPoint,
-                        isSolutionEdge ? Color.GREEN : Color.BLACK);
+                drawCurvedEdge(edge.node1, edge.node2, edge.controlPoint, edgeColor);
                 if (showDistances) {
-                    drawDistanceLabel(edge.node1, edge.node2, isSolutionEdge ? Color.DARKGREEN : Color.BLUE);
+                    drawDistanceLabel(edge.node1, edge.node2, labelColor, true, edge.controlPoint);
                 }
             } else {
-                gc.setStroke(isSolutionEdge ? Color.GREEN : Color.BLACK);
+                gc.setStroke(edgeColor);
                 gc.strokeLine(edge.node1.x, edge.node1.y, edge.node2.x, edge.node2.y);
                 if (showDistances) {
-                    drawDistanceLabel(edge.node1, edge.node2, isSolutionEdge ? Color.DARKGREEN : Color.BLUE);
+                    drawDistanceLabel(edge.node1, edge.node2, labelColor, false, null);
                 }
             }
         }
+    
 
         // Draw nodes
         for (Node node : nodes) {
@@ -670,20 +714,20 @@ public class App extends Application {
         gc.setLineDashes(0);
     }
 
-    private void drawDistanceLabel(Node node1, Node node2, Color color) {
+    private void drawDistanceLabel(Node node1, Node node2, Color color, boolean isCurved, ControlPoint control) {
         double distance;
-        if (curvedEdgeMode && controlPoint != null) {
-            // For curves with control points (either being drawn or existing ones)
-            distance = MathUtils.calculateCurveLength(node1, controlPoint, node2, scaleRatio);
+        if (isCurved && control != null) {
+            // For curved edges with control points
+            distance = MathUtils.calculateCurveLength(node1, control, node2, scaleRatio);
         } else {
             // For straight edges
             distance = MathUtils.calculateDistance(node1, node2, scaleRatio);
         }
-
+    
         String distanceText = String.format("%.2f %s", distance, unitName);
         double midX = (node1.x + node2.x) / 2;
         double midY = (node1.y + node2.y) / 2;
-
+    
         gc.setFill(Color.WHITE);
         gc.fillRect(midX - 30, midY - 10, 60, 20);
         gc.setStroke(color);
@@ -691,6 +735,7 @@ public class App extends Application {
         gc.setFill(color);
         gc.fillText(distanceText, midX - 25, midY + 5);
     }
+    
 
     private Node getNodeAt(double x, double y) {
         for (Node node : nodes) {
@@ -887,6 +932,9 @@ public class App extends Application {
             case R:
                 // Rename node
                 renameSelectedNode(primaryStage);
+                selectedNode = null;
+                controlPoint = null;
+                creatingEdge = false;
                 break;
 
             case PLUS:
