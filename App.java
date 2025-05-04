@@ -13,16 +13,21 @@ import org.json.JSONObject;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToolBar;
 import javafx.scene.image.Image;
@@ -48,6 +53,7 @@ public class App extends Application {
     private GraphicsContext gc;
     private List<Node> nodes = new ArrayList<>();
     private List<Edge> edges = new ArrayList<>();
+
     private Node selectedNode = null;
     private Node draggedNode = null;
     private ControlPoint controlPoint = null;
@@ -68,7 +74,13 @@ public class App extends Application {
     private ListView<String> nodeListView = new ListView<>();
     private ListView<String> edgeListView = new ListView<>();
 
-    
+    private ComboBox<String> startNodeCombo = new ComboBox<>();
+    private ComboBox<String> destinationNodeCombo = new ComboBox<>();
+    private Button solvePathBtn = new Button("Solve Path");
+    private TextArea solutionText = new TextArea();
+    private CheckBox showPathCheck = new CheckBox("Show Path");
+    private List<Edge> solutionPath = new ArrayList<>();
+
     @Override
     public void start(Stage primaryStage) {
         BorderPane root = new BorderPane();
@@ -125,14 +137,50 @@ public class App extends Application {
                 edgeListView
         );
 
-        VBox rightPanel = new VBox();
-        rightPanel.setPrefWidth(200);
+        VBox rightPanel = new VBox(10);
+        rightPanel.setPrefWidth(250);
+        rightPanel.setPadding(new Insets(10));
+        rightPanel.setStyle("-fx-background-color: #f5f5f5;");
+
+        // Title
+        Label titleLabel = new Label("Path Solver");
+        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14;");
+
+        // Start Node selection
+        Label startLabel = new Label("Start Node:");
+        startNodeCombo.setPrefWidth(Double.MAX_VALUE);
+
+        // Destination Node selection
+        Label destLabel = new Label("Destination Node:");
+        destinationNodeCombo.setPrefWidth(Double.MAX_VALUE);
+
+        // Solve button
+        solvePathBtn.setPrefWidth(Double.MAX_VALUE);
+        solvePathBtn.setStyle("-fx-base: #4CAF50;");
+
+        // Solution display
+        solutionText.setEditable(false);
+        solutionText.setWrapText(true);
+        solutionText.setPrefHeight(150);
+
+        // Show path checkbox
+        showPathCheck.setSelected(true);
+
         rightPanel.getChildren().addAll(
-                new Label("Solve the Direction"),
-                new Label(),
-                new Label("Start"),
-                new Label("Destination")
+                titleLabel,
+                new Separator(),
+                startLabel,
+                startNodeCombo,
+                destLabel,
+                destinationNodeCombo,
+                solvePathBtn,
+                new Separator(),
+                showPathCheck,
+                new Label("Solution:"),
+                solutionText
         );
+
+        nodeListView.getItems().addListener((ListChangeListener<String>) c -> updateNodeCombos());
 
         root.setTop(toolbar);
         root.setCenter(scrollPane);
@@ -181,10 +229,6 @@ public class App extends Application {
         saveBtn.setOnAction(e -> saveMap(primaryStage));
         loadBtn.setOnAction(e -> loadMap(primaryStage));
 
-        // ImageImporter.importImage(primaryStage, canvas, image -> {
-        //     this.backgroundImage = image;
-        // }, this::redrawCanvas);
-        // importImageBtn.setOnAction(e -> importImage(primaryStage));
         importImageBtn.setOnAction(e -> {
             ImageImporter.importImage(
                     primaryStage,
@@ -212,6 +256,9 @@ public class App extends Application {
             updateLists();
             redrawCanvas();
         });
+
+        solvePathBtn.setOnAction(e -> solvePath());
+        showPathCheck.setOnAction(e -> redrawCanvas());
 
         // Mouse event handlers
         canvas.setOnMouseClicked(this::handlePrimaryClick);
@@ -253,10 +300,10 @@ public class App extends Application {
                             // Create a temporary control point at the midpoint
                             double midX = (selectedNode.x + e.getX()) / 2;
                             double midY = (selectedNode.y + e.getY()) / 2;
-                            drawCurvedEdge(selectedNode, new Node(e.getX(), e.getY(), "",false),
+                            drawCurvedEdge(selectedNode, new Node(e.getX(), e.getY(), "", false),
                                     new ControlPoint(midX, midY), Color.GRAY);
                         } else {
-                            drawCurvedEdge(selectedNode, new Node(e.getX(), e.getY(), "",false),
+                            drawCurvedEdge(selectedNode, new Node(e.getX(), e.getY(), "", false),
                                     controlPoint, Color.GRAY);
                         }
                     } else {
@@ -306,29 +353,81 @@ public class App extends Application {
         primaryStage.setTitle("MiniMap Builder");
         primaryStage.setScene(scene);
         primaryStage.show();
+
+    }
+
+    private void solvePath() {
+        int startIndex = startNodeCombo.getSelectionModel().getSelectedIndex();
+        int destIndex = destinationNodeCombo.getSelectionModel().getSelectedIndex();
+
+        if (startIndex < 0 || destIndex < 0 || startIndex == destIndex) {
+            solutionText.setText("Please select valid start and destination nodes");
+            return;
+        }
+
+        Node start = nodes.get(startIndex);
+        Node dest = nodes.get(destIndex);
+
+        // Clear previous solution
+        solutionPath.clear();
+
+        // Here you would implement your pathfinding algorithm
+        // For now, we'll just find a direct path if it exists
+        for (Edge edge : edges) {
+            if ((edge.node1 == start && edge.node2 == dest)
+                    || (edge.node1 == dest && edge.node2 == start)) {
+                solutionPath.add(edge);
+                break;
+            }
+        }
+
+        if (solutionPath.isEmpty()) {
+            solutionText.setText("No direct path found between " + start.label + " and " + dest.label);
+        } else {
+            double totalDistance = 0;
+            StringBuilder sb = new StringBuilder();
+            sb.append("Path from ").append(start.label).append(" to ").append(dest.label).append(":\n");
+
+            for (Edge edge : solutionPath) {
+                double distance = edge.getLength(scaleRatio);
+                totalDistance += distance;
+                sb.append("- ").append(edge.node1.label).append(" -> ").append(edge.node2.label)
+                        .append(" (").append(String.format("%.2f", distance)).append(" ").append(unitName).append(")\n");
+            }
+
+            sb.append("\nTotal distance: ").append(String.format("%.2f", totalDistance)).append(" ").append(unitName);
+            solutionText.setText(sb.toString());
+        }
+
+        redrawCanvas();
+    }
+
+    private void updateNodeCombos() {
+        ObservableList<String> items = FXCollections.observableArrayList();
+        for (Node node : nodes) {
+            if (node.isSpecial == true) {
+                items.add(node.label);
+            }
+        }
+
+        String currentStart = startNodeCombo.getSelectionModel().getSelectedItem();
+        String currentDest = destinationNodeCombo.getSelectionModel().getSelectedItem();
+
+        startNodeCombo.setItems(items);
+        destinationNodeCombo.setItems(items);
+
+        if (currentStart != null) {
+            startNodeCombo.getSelectionModel().select(currentStart);
+        }
+        if (currentDest != null) {
+            destinationNodeCombo.getSelectionModel().select(currentDest);
+        }
     }
 
     private void logChecker() {
+
         System.out.println();
         System.out.println("Log Checker -----------");
-        System.out.println();
-
-        System.out.println("All Nodes:");
-        for (Node node : nodes) {
-            System.out.println(node.label); // uses toString()
-        }
-
-        System.out.println("All Edges:");
-        for (Edge edge : edges) {
-            System.out.println(edge); // uses toString()
-        }
-
-        System.out.println("nodeListView ----------");
-        System.out.println(nodeListView.getItems());
-        System.out.println();
-
-        System.out.println("edgeListView ----------");
-        System.out.println(edgeListView.getItems());
         System.out.println();
 
     }
@@ -377,7 +476,6 @@ public class App extends Application {
         });
     }
 
-
     private void updateLists() {
         nodeListView.getItems().clear();
         for (Node node : nodes) {
@@ -419,7 +517,7 @@ public class App extends Application {
 
     private void handlePrimaryClick(MouseEvent e) {
         if (!creatingEdge && isAddNode) {
-            Node newNode = new Node(e.getX(), e.getY(), String.valueOf(nodes.size() + 1),false);
+            Node newNode = new Node(e.getX(), e.getY(), String.valueOf(nodes.size() + 1), false);
             nodes.add(newNode);
             updateLists();
             redrawCanvas();
@@ -506,18 +604,21 @@ public class App extends Application {
         }
 
         // Draw edges
-        // In redrawCanvas():
         for (Edge edge : edges) {
+            // Highlight solution path edges if showing
+            boolean isSolutionEdge = showPathCheck.isSelected() && solutionPath.contains(edge);
+
             if (edge.curved) {
-                drawCurvedEdge(edge.node1, edge.node2, edge.controlPoint, Color.BLACK);
+                drawCurvedEdge(edge.node1, edge.node2, edge.controlPoint,
+                        isSolutionEdge ? Color.GREEN : Color.BLACK);
                 if (showDistances) {
-                    drawDistanceLabel(edge.node1, edge.node2, Color.BLUE);
+                    drawDistanceLabel(edge.node1, edge.node2, isSolutionEdge ? Color.DARKGREEN : Color.BLUE);
                 }
             } else {
-                gc.setStroke(Color.BLACK);
+                gc.setStroke(isSolutionEdge ? Color.GREEN : Color.BLACK);
                 gc.strokeLine(edge.node1.x, edge.node1.y, edge.node2.x, edge.node2.y);
                 if (showDistances) {
-                    drawDistanceLabel(edge.node1, edge.node2, Color.BLUE);
+                    drawDistanceLabel(edge.node1, edge.node2, isSolutionEdge ? Color.DARKGREEN : Color.BLUE);
                 }
             }
         }
