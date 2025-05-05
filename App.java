@@ -383,7 +383,8 @@ public class App extends Application {
             if (start != null && dest != null) {
                 break; // Found both
 
-                    }}
+            }
+        }
 
         if (start == null || dest == null) {
             solutionText.setText("Selected nodes not found in graph");
@@ -439,7 +440,7 @@ public class App extends Application {
             double distance = edge.getLength(scaleRatio);
             totalDistance += distance;
 
-            if(activist == edge.node1.label){
+            if (activist == edge.node1.label) {
                 sb.append("- ").append(edge.node1.label).append(" → ").append(edge.node2.label)
                         .append(" (").append(String.format("%.2f", distance)).append(" ").append(unitName).append(")\n");
                 activist = edge.node2.label;
@@ -635,6 +636,12 @@ public class App extends Application {
         }
     }
 
+    private void clearFN(){
+        selectedNode = null;
+        controlPoint = null;
+        creatingEdge = false;
+    }
+
     private void handleMouseDragged(MouseEvent e) {
         if (draggedNode != null) {
             draggedNode.x = e.getX() - dragOffsetX;
@@ -648,6 +655,7 @@ public class App extends Application {
             updateLists();
             redrawCanvas();
         }
+        clearFN();
     }
 
     private void redrawCanvas() {
@@ -663,7 +671,7 @@ public class App extends Application {
             boolean isSolutionEdge = showPathCheck.isSelected() && solutionPath.contains(edge);
             Color edgeColor = isSolutionEdge ? Color.GREEN : Color.BLACK;
             Color labelColor = isSolutionEdge ? Color.DARKGREEN : Color.BLUE;
-    
+
             if (edge.curved) {
                 drawCurvedEdge(edge.node1, edge.node2, edge.controlPoint, edgeColor);
                 if (showDistances) {
@@ -677,7 +685,6 @@ public class App extends Application {
                 }
             }
         }
-    
 
         // Draw nodes
         for (Node node : nodes) {
@@ -735,11 +742,11 @@ public class App extends Application {
             // For straight edges
             distance = MathUtils.calculateDistance(node1, node2, scaleRatio);
         }
-    
+
         String distanceText = String.format("%.2f %s", distance, unitName);
         double midX = (node1.x + node2.x) / 2;
         double midY = (node1.y + node2.y) / 2;
-    
+
         gc.setFill(Color.WHITE);
         gc.fillRect(midX - 30, midY - 10, 60, 20);
         gc.setStroke(color);
@@ -747,7 +754,6 @@ public class App extends Application {
         gc.setFill(color);
         gc.fillText(distanceText, midX - 25, midY + 5);
     }
-    
 
     private Node getNodeAt(double x, double y) {
         for (Node node : nodes) {
@@ -1009,6 +1015,7 @@ public class App extends Application {
                 controlPoint = null;
                 creatingEdge = false;
                 redrawCanvas();
+                clearFN();
                 break;
 
             case SLASH:
