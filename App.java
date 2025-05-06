@@ -55,6 +55,9 @@ public class App extends Application {
     private List<Node> nodes = new ArrayList<>();
     private List<Edge> edges = new ArrayList<>();
 
+
+
+    
     private Node selectedNode = null;
     private Node draggedNode = null;
     private ControlPoint controlPoint = null;
@@ -397,14 +400,14 @@ public class App extends Application {
         // Use A* algorithm
         AStarPathfinder.PathResult result = AStarPathfinder.findPath(nodes, edges, start, dest);
 
-        System.err.println("nodes: " + nodes.toString());
-        System.err.println();
-        System.err.println("edges: " + edges.toString());
-        System.err.println();
-        System.err.println("start: " + start.label);
-        System.err.println();
-        System.err.println("dest: " + dest.label);
-        System.err.println();
+        // System.err.println("nodes: " + nodes.toString());
+        // System.err.println();
+        // System.err.println("edges: " + edges.toString());
+        // System.err.println();
+        // System.err.println("start: " + start.label);
+        // System.err.println();
+        // System.err.println("dest: " + dest.label);
+        // System.err.println();
 
         if (result.path.isEmpty()) {
             solutionText.setText("No path found between " + start.label + " and " + dest.label);
@@ -671,14 +674,16 @@ public class App extends Application {
         for (Edge edge : edges) {
             // Highlight solution path edges if showing
             boolean isSolutionEdge = showPathCheck.isSelected() && solutionPath.contains(edge);
-            Color edgeColor = isSolutionEdge ? Color.LIGHTGREEN : Color.BLACK;
+            Color edgeColor = isSolutionEdge ? Color.MAGENTA : Color.BLACK;
             Color labelColor = isSolutionEdge ? Color.DARKGREEN : Color.BLUE;
 
             if (edge.curved) {
                 drawCurvedEdge(edge.node1, edge.node2, edge.controlPoint, edgeColor);
+
                 if (showDistances) {
                     drawDistanceLabel(edge.node1, edge.node2, labelColor, true, edge.controlPoint);
                 }
+                
             } else {
                 gc.setStroke(edgeColor);
                 gc.strokeLine(edge.node1.x, edge.node1.y, edge.node2.x, edge.node2.y);
