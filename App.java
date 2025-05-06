@@ -101,7 +101,7 @@ public class App extends Application {
         ToolBar toolbar = new ToolBar();
         Button addNodeBtn = new Button("Add Node");
         CheckBox addNodeCheck = new CheckBox("");
-        addNodeCheck.setSelected(false);
+        addNodeCheck.setSelected(true);
 
         Button straightEdgeBtn = new Button("Straight Edge");
         Button curvedEdgeBtn = new Button("Curved Edge");
@@ -648,6 +648,7 @@ public class App extends Application {
             draggedNode.y = e.getY() - dragOffsetY;
             updateLists();
             redrawCanvas();
+            clearFN();
         } else if (controlPoint != null && curvedEdgeMode) {
             // Moving control point
             controlPoint.x = e.getX() - dragOffsetX;
@@ -655,7 +656,8 @@ public class App extends Application {
             updateLists();
             redrawCanvas();
         }
-        clearFN();
+        
+        
     }
 
     private void redrawCanvas() {
@@ -669,7 +671,7 @@ public class App extends Application {
         for (Edge edge : edges) {
             // Highlight solution path edges if showing
             boolean isSolutionEdge = showPathCheck.isSelected() && solutionPath.contains(edge);
-            Color edgeColor = isSolutionEdge ? Color.GREEN : Color.BLACK;
+            Color edgeColor = isSolutionEdge ? Color.LIGHTGREEN : Color.BLACK;
             Color labelColor = isSolutionEdge ? Color.DARKGREEN : Color.BLUE;
 
             if (edge.curved) {
@@ -1015,7 +1017,7 @@ public class App extends Application {
                 controlPoint = null;
                 creatingEdge = false;
                 redrawCanvas();
-                clearFN();
+                // clearFN();
                 break;
 
             case SLASH:
