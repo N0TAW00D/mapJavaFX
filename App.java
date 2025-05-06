@@ -895,17 +895,10 @@ public class App extends Application {
             try {
                 double realWidth = Double.parseDouble(input);
                 if (backgroundImage != null && realWidth > 0) {
-                    scaleRatio = realWidth / backgroundImage.getWidth();
-                    TextInputDialog unitDialog = new TextInputDialog(unitName);
-                    unitDialog.setTitle("Set Units");
-                    unitDialog.setHeaderText("Enter the unit of measurement");
-                    unitDialog.setContentText("Unit (e.g., m, km, ft):");
-
-                    unitDialog.showAndWait().ifPresent(unit -> {
-                        unitName = unit;
-                        updateLists();
-                        redrawCanvas();
-                    });
+                    scaleRatio = realWidth / backgroundImage.getWidth();                    
+                    
+                    updateLists();
+                    redrawCanvas();
                 }
             } catch (NumberFormatException e) {
                 // Invalid input
