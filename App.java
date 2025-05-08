@@ -344,7 +344,7 @@ public class App extends Application {
                     redrawCanvas();
                     // Highlight the selected edge
                     gc.setStroke(Color.RED);
-                    gc.setLineWidth(2);
+                    gc.setLineWidth(3);
                     if (edge.curved) {
                         drawCurvedEdge(edge.node1, edge.node2, edge.controlPoint, Color.RED);
                     } else {
@@ -676,6 +676,13 @@ public class App extends Application {
             boolean isSolutionEdge = showPathCheck.isSelected() && solutionPath.contains(edge);
             Color edgeColor = isSolutionEdge ? Color.MAGENTA : Color.BLACK;
             Color labelColor = isSolutionEdge ? Color.DARKGREEN : Color.BLUE;
+
+            
+            if(isSolutionEdge){
+                gc.setLineWidth(3);
+            } else {
+                gc.setLineWidth(1);
+            }
 
             if (edge.curved) {
                 drawCurvedEdge(edge.node1, edge.node2, edge.controlPoint, edgeColor);
@@ -1011,6 +1018,7 @@ public class App extends Application {
 
             case ESCAPE:
                 // Cancel current operation
+                solutionPath.clear();
                 selectedNode = null;
                 controlPoint = null;
                 creatingEdge = false;
