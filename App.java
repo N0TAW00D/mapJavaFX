@@ -54,9 +54,6 @@ public class App extends Application {
     private GraphicsContext gc;
     private List<Node> nodes = new ArrayList<>();
     private List<Edge> edges = new ArrayList<>();
-
-
-
     
     private Node selectedNode = null;
     private Node draggedNode = null;
@@ -71,8 +68,6 @@ public class App extends Application {
     private String unitName = "m"; // default unit
     private boolean showDistances = true;
     private boolean isAddNode = true;
-
-    private int logCount = 0;
 
     private double radius = 5;
 
